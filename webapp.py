@@ -69,14 +69,12 @@ report_prompt = PromptTemplate(
 embedding_function, llm, vectorstore = load_models()
 
 st.title('NASA AI Agent')
-
 tabs = st.tabs(['QnA about NASA Tech', 'Analyze NASA Document'])
 
 with tabs[0]:
-    st.write('''
-            
-             ''')
-    question = st.text_input('What do you want to know about NASA Tech Bulletin?')
+    st.write('The Agent will strictly provide information only if related to [NASA Technical Bulletins](https://www.nasa.gov/nesc/knowledge-products/nesc-technical-bulletins/)')
+    st.write('It will provide the document URL along with an answer to the query.')
+    question = st.text_input('What do you want to know about NASA Technology?')
 
     if st.button('Ask'):
         qna_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", 
@@ -90,6 +88,7 @@ with tabs[0]:
             st.write(f'Source: {result[0][0].metadata["source"]}')
 
 with tabs[1]:
+    st.write('Receive recommendations about NASA technical requirements from documents you upload! ')
     pdf_file = st.file_uploader('Upload a NASA PDF Document!', type=['pdf'])
     mode = st.radio('Select an option:', ['Provide recommendations', 'Ask a question'])
     if mode == 'Ask a question':
