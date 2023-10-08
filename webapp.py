@@ -1,9 +1,9 @@
 import streamlit as st
 import tempfile
 
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# __import__('pysqlite3')
+# import sys
+# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import pinecone
 from langchain.vectorstores import Pinecone, Chroma
@@ -16,6 +16,7 @@ from langchain.prompts import PromptTemplate
 from langchain.llms import Clarifai
 from langchain.chains import RetrievalQA
 
+st.set_page_config('StarScanAI', ':star:')
 
 @st.cache_resource
 def load_models():
@@ -68,7 +69,7 @@ report_prompt = PromptTemplate(
 
 embedding_function, llm, vectorstore = load_models()
 
-st.title('NASA AI Agent')
+st.title('NASA Space Apps: :star: StarScanAI')
 tabs = st.tabs(['QnA about NASA Tech', 'Analyze NASA Document'])
 
 with tabs[0]:
