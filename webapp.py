@@ -35,17 +35,7 @@ def load_models():
 
     return embedding_function, llm, vectorstore
 
-qna_template = '''
-Use the following pieces of context to answer the question at the end. 
-If you don't know the answer, just say that you don't know, don't try to make up an answer.
-
-{context}
-
-Question: {question}
-Answer in English
-'''
-
-report_template = '''
+template = '''
 You are STAR, an AI-powered app designed for NASA. Your goal is to
 provide structured recommendations for technical requirements.
  The recommendations should include:
@@ -55,47 +45,44 @@ provide structured recommendations for technical requirements.
  - Suggested modifications.
  - Sources of each recommendation.
 
-Use the following pieces of context to provide your answer in the structured format above. 
+Use the following pieces of context to answer the question in the structured format. 
 {context}
+If you don't know the answer, just say that you don't know, don't try to make up an answer.
+Question: {question}
+Answer in English
 '''
 
-qna_prompt = PromptTemplate(
-    template=qna_template, input_variables=["context", "question"]
+prompt = PromptTemplate(
+    template=template, input_variables=['context', 'question']
 )
 
-report_prompt = PromptTemplate(
-    template=report_template, input_variables=["context"]
-)
-
-embedding_function, llm, vectorstore = load_models()
+embedding_function, llm, pinecone_vectors = load_models()
 
 st.title('NASA Space Apps: :star: StarScanAI')
-tabs = st.tabs(['QnA about NASA Tech', 'Analyze NASA Document'])
+st.write('Receive technical recommendations about NASA Documents.')
 
-with tabs[0]:
-    st.write('The Agent will strictly provide information only if related to [NASA Technical Bulletins](https://www.nasa.gov/nesc/knowledge-products/nesc-technical-bulletins/)')
-    st.write('It will provide the document URL along with an answer to the query.')
-    question = st.text_input('What do you want to know about NASA Technology?')
+media = st.radio('What data you want to use? ', ['NASA Technical Bulletin Database', 'Upload custom Document'])
+query = st.text_input('Query:')
+generate = st.button('Generate Response')
 
-    if st.button('Ask'):
-        qna_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", 
-                    retriever=vectorstore.as_retriever(), 
-                    chain_type_kwargs={"prompt": qna_prompt})
-        with st.spinner('Processing Answer..'):
-            answer = qna_chain.run(question)
-            result = vectorstore.similarity_search_with_score(question, k=1)
+if media == 'NASA Technical Bulletin Database':
+    st.info('The Agent will strictly provide information from [NASA Technical Bulletins](https://www.nasa.gov/nesc/knowledge-products/nesc-technical-bulletins/)')
+    if generate and query:
+        rag_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", 
+                    retriever=pinecone_vectors.as_retriever(), 
+                    chain_type_kwargs={"prompt": prompt})
+        with st.spinner('Generating recommendations..'):
+            answer = rag_chain.run(query)
+            result = pinecone_vectors.similarity_search_with_score(query, k=1)
         st.write(answer)
         if result[0][1] > 0.5:
             st.write(f'Source: {result[0][0].metadata["source"]}')
 
-with tabs[1]:
-    st.write('Receive recommendations about NASA technical requirements from documents you upload! ')
-    pdf_file = st.file_uploader('Upload a NASA PDF Document!', type=['pdf'])
-    mode = st.radio('Select an option:', ['Provide recommendations', 'Ask a question'])
-    if mode == 'Ask a question':
-        question = st.text_input('Ask a question about this Document!')
+else:
+    st.info('Some documents may not be present in our database. Please upload them here.')
+    pdf_file = st.file_uploader('', type=['pdf'])
     
-    if pdf_file:
+    if pdf_file and generate and query:
         tfile = tempfile.NamedTemporaryFile(delete=False) 
         tfile.write(pdf_file.read())
 
@@ -106,19 +93,11 @@ with tabs[1]:
         docs = text_splitter.split_documents(pdf_data)
         
         pdf_vectors = Chroma.from_documents(documents=docs, embedding=embedding_function)
-
-        if mode == 'Provide recommendations':
-            chain_type_kwargs={"prompt": report_prompt}
-            prompt = 'none'
-        else:
-            chain_type_kwargs={"prompt": qna_prompt}
-            prompt = question
-
-        report_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", 
-                                        retriever=pdf_vectors.as_retriever(), 
-                                        chain_type_kwargs=chain_type_kwargs)
         
-        if st.button('Submit'):
-            with st.spinner('Processing..'):
-                report = report_chain.run(prompt)
-            st.write(report)
+        rag_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", 
+                            retriever=pdf_vectors.as_retriever(), 
+                            chain_type_kwargs={"prompt": prompt})
+        
+        with st.spinner('Generating recommendations..'):
+            report = rag_chain.run(query)
+        st.write(report)
