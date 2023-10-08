@@ -1,4 +1,4 @@
-# nasa-space-apps
+# StarScanAI
 
 **IMPORTANT**: To run app locally, create `.streamlit/secrets.toml`, and place your ClarifaiToken, pinecone_apikey, pinecone_env there
 
