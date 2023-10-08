@@ -1,9 +1,9 @@
 import streamlit as st
 import tempfile
 
-# __import__('pysqlite3')
-# import sys
-# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import pinecone
 from langchain.vectorstores import Pinecone, Chroma
